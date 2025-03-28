@@ -15,6 +15,9 @@ fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
 
 // Serve static files from uploads directory
 app.use("/uploads", express.static("uploads"));
+app.get("/", (req, res) => {
+  res.json({ message: "Server is running" });
+});
 
 // Helper function to generate file path
 const getFilePath = (format) => {
