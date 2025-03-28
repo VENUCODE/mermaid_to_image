@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "express": "^4.21.2",
-    "puppeteer": "^24.4.0"
+    "puppeteer": "^24.4.0",
+    "mongoose": "^8.1.1"
   }
 }
