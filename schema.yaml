@@ -4,7 +4,7 @@ info:
   description: API to generate diagrams using Mermaid.js and Puppeteer, saving them as PNG or SVG files.
   version: 1.0.0
 servers:
-  - url: https://mermaid-to-image.onrender.com
+  - url: https://b73c-2409-40f0-1019-1b67-5598-43d8-e8f5-48b.ngrok-free.app
     description: Local server
 paths:
   /generate-diagram:
