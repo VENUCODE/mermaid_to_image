@@ -20,8 +20,8 @@ app.get("/", (req, res) => {
 });
 
 // Helper function to generate file path
-const getFilePath = (format) => {
-  const fileName = `diagram-${Date.now()}.${format}`;
+const getFilePath = () => {
+  const fileName = `diagram-${Date.now()}.png`;
   return {
     fileName,
     filePath: path.join(uploadsDir, fileName),
@@ -29,11 +29,10 @@ const getFilePath = (format) => {
 };
 
 // Function to generate diagram using Mermaid and Puppeteer
-async function generateDiagram(mermaidCode, format) {
+async function generateDiagram(mermaidCode) {
   const browser = await puppeteer.launch({ headless: "new" });
   const page = await browser.newPage();
 
-  // HTML template with Mermaid
   const html = `
     <!DOCTYPE html>
     <html>
@@ -55,19 +54,10 @@ async function generateDiagram(mermaidCode, format) {
   await page.waitForFunction('document.querySelector(".mermaid svg")');
 
   const element = await page.$(".mermaid");
-  let result;
-
-  if (format === "png") {
-    result = await element.screenshot({
-      type: "png",
-      omitBackground: true,
-    });
-  } else {
-    result = await page.evaluate(() => {
-      const svg = document.querySelector(".mermaid svg");
-      return svg.outerHTML;
-    });
-  }
+  const result = await element.screenshot({
+    type: "png",
+    omitBackground: true,
+  });
 
   await browser.close();
   return result;
@@ -76,34 +66,21 @@ async function generateDiagram(mermaidCode, format) {
 // Route to generate diagram
 app.post("/generate-diagram", async (req, res) => {
   try {
-    const { mermaidCode, format = "png" } = req.body;
+    const { mermaidCode } = req.body;
 
     if (!mermaidCode) {
       return res.status(400).json({ error: "Mermaid code is required" });
     }
 
-    const diagram = await generateDiagram(mermaidCode, format);
-    const { fileName, filePath } = getFilePath(format);
+    const diagram = await generateDiagram(mermaidCode);
+    const { fileName, filePath } = getFilePath();
 
-    // Save the diagram to file
-    if (format === "png") {
-      await fs.writeFile(filePath, diagram);
-    } else {
-      await fs.writeFile(filePath, diagram, "utf-8");
-    }
+    await fs.writeFile(filePath, diagram);
 
     // Return the file information
     res.json({
       success: true,
-      format,
-      fileName,
-      filePath: `/uploads/${fileName}`, // Return the public URL path
-      contentType: format === "png" ? "image/png" : "image/svg+xml",
-      // Example usage in HTML
-      htmlExample:
-        format === "png"
-          ? `<img src="/uploads/${fileName}" alt="Mermaid Diagram">`
-          : `<div>${diagram}</div>`,
+      filePath: `/uploads/${fileName}`,
     });
   } catch (error) {
     console.error("Error generating diagram:", error);

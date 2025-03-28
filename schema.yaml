@@ -1,0 +1,62 @@
+openapi: 3.0.0
+info:
+  title: Mermaid Diagram Generator API
+  description: API to generate diagrams using Mermaid.js and Puppeteer, saving them as PNG or SVG files.
+  version: 1.0.0
+servers:
+  - url: https://mermaid-to-image.onrender.com
+    description: Local server
+paths:
+  /generate-diagram:
+    post:
+      summary: Generate a diagram from Mermaid.js code
+      description: Converts Mermaid.js code into an SVG or PNG diagram and provides a downloadable link.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mermaidCode
+              properties:
+                mermaidCode:
+                  type: string
+                  description: Mermaid.js code defining the diagram.
+
+      responses:
+        "200":
+          description: Successfully generated diagram.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  filePath:
+                    type: string
+                    example: /uploads/diagram-1711598765.png
+                    description: Public URL path to the generated file
+
+        "400":
+          description: Bad request due to missing parameters.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Mermaid code is required"
+        "500":
+          description: Internal server error during diagram generation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Failed to generate diagram"
