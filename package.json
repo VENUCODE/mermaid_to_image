@@ -13,7 +13,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.mjs",
-    "build": "npm install && node node_modules/puppeteer/install.js"
+    "build": "npm install && node node_modules/puppeteer/install.mjs"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
