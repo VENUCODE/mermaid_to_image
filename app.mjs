@@ -3,19 +3,14 @@ import puppeteer from "puppeteer";
 import { promises as fs } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import mongoose from "mongoose";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 app.use(express.json());
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI;
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB connection error:", err));
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, "uploads");
@@ -24,18 +19,18 @@ fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
 // Serve static files from uploads directory
 app.use("/uploads", express.static("uploads"));
 
-// MongoDB Schema
-const diagramSchema = new mongoose.Schema({
-  mermaidCode: { type: String, required: true },
-  imageData: { type: Buffer, required: true },
-  createdAt: { type: Date, default: Date.now },
-});
-
-const Diagram = mongoose.model("Diagram", diagramSchema);
-
 app.get("/", (req, res) => {
   res.json({ message: "Server is running" });
 });
+
+// Helper function to generate file path
+const getFilePath = () => {
+  const fileName = `diagram-${Date.now()}.png`;
+  return {
+    fileName,
+    filePath: path.join(uploadsDir, fileName),
+  };
+};
 
 // Function to generate diagram using Mermaid and Puppeteer
 async function generateDiagram(mermaidCode) {
@@ -92,19 +87,15 @@ app.post("/generate-diagram", async (req, res) => {
     }
 
     const diagram = await generateDiagram(mermaidCode);
+    const { fileName, filePath } = getFilePath();
 
-    // Save to MongoDB with the actual image data
-    const newDiagram = new Diagram({
-      mermaidCode,
-      imageData: diagram, // Store the actual image buffer
-    });
+    // Save the image to the uploads directory
+    await fs.writeFile(filePath, diagram);
 
-    await newDiagram.save();
-
-    // Return the diagram ID
+    // Return the file path
     res.json({
       success: true,
-      diagramId: newDiagram._id,
+      filePath: `/uploads/${fileName}`,
     });
   } catch (error) {
     console.error("Error generating diagram:", error);
@@ -112,32 +103,37 @@ app.post("/generate-diagram", async (req, res) => {
   }
 });
 
-// Route to get all diagrams
-app.get("/diagrams", async (req, res) => {
+// Route to delete a diagram by file path
+app.delete("/diagrams", async (req, res) => {
   try {
-    const diagrams = await Diagram.find().sort({ createdAt: -1 });
-    res.json(diagrams);
-  } catch (error) {
-    console.error("Error fetching diagrams:", error);
-    res.status(500).json({ error: "Failed to fetch diagrams" });
-  }
-});
+    const { filePath } = req.body;
 
-// Route to get a specific diagram
-app.get("/diagrams/:id", async (req, res) => {
-  try {
-    const diagram = await Diagram.findById(req.params.id);
-    if (!diagram) {
+    if (!filePath) {
+      return res.status(400).json({ error: "File path is required" });
+    }
+
+    // Extract the file name from the path
+    const fileName = path.basename(filePath);
+    const fullPath = path.join(uploadsDir, fileName);
+
+    // Check if file exists
+    try {
+      await fs.access(fullPath);
+    } catch (error) {
       return res.status(404).json({ error: "Diagram not found" });
     }
 
-    // Set the content type to image/png
-    res.setHeader("Content-Type", "image/png");
-    // Send the image data directly
-    res.send(diagram.imageData);
+    // Delete the file
+    await fs.unlink(fullPath);
+
+    res.json({
+      success: true,
+      message: "Diagram deleted successfully",
+      deletedFilePath: filePath,
+    });
   } catch (error) {
-    console.error("Error fetching diagram:", error);
-    res.status(500).json({ error: "Failed to fetch diagram" });
+    console.error("Error deleting diagram:", error);
+    res.status(500).json({ error: "Failed to delete diagram" });
   }
 });
 

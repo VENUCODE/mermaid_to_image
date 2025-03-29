@@ -1,16 +1,32 @@
 openapi: 3.0.0
 info:
   title: Mermaid Diagram Generator API
-  description: API to generate diagrams using Mermaid.js and Puppeteer, saving them as PNG or SVG files.
+  description: API to generate diagrams using Mermaid.js and Puppeteer, storing them as files in the uploads directory.
   version: 1.0.0
 servers:
-  - url: https://b73c-2409-40f0-1019-1b67-5598-43d8-e8f5-48b.ngrok-free.app
+  - url:
     description: Local server
 paths:
+  /:
+    get:
+      summary: Health check endpoint
+      description: Returns a simple message indicating the server is running
+      responses:
+        "200":
+          description: Server is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Server is running"
+
   /generate-diagram:
     post:
       summary: Generate a diagram from Mermaid.js code
-      description: Converts Mermaid.js code into an SVG or PNG diagram and provides a downloadable link.
+      description: Converts Mermaid.js code into a PNG diagram and saves it to the uploads directory.
       requestBody:
         required: true
         content:
@@ -26,7 +42,7 @@ paths:
 
       responses:
         "200":
-          description: Successfully generated diagram.
+          description: Successfully generated and saved diagram.
           content:
             application/json:
               schema:
@@ -37,7 +53,7 @@ paths:
                     example: true
                   filePath:
                     type: string
-                    example: /uploads/diagram-1711598765.png
+                    example: "/uploads/diagram-1711598765.png"
                     description: Public URL path to the generated file
 
         "400":
@@ -60,3 +76,150 @@ paths:
                   error:
                     type: string
                     example: "Failed to generate diagram"
+
+  /diagrams:
+    get:
+      summary: Get all diagrams
+      description: Retrieves all diagrams stored in MongoDB, sorted by creation date.
+      responses:
+        "200":
+          description: Successfully retrieved all diagrams.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                      example: "507f1f77bcf86cd799439011"
+                    mermaidCode:
+                      type: string
+                      description: Original Mermaid.js code
+                    imagePath:
+                      type: string
+                      example: "/uploads/diagram-1711598765.png"
+                      description: Public URL path to the generated file
+                    createdAt:
+                      type: string
+                      format: date-time
+                      example: "2024-03-28T12:00:00Z"
+        "500":
+          description: Internal server error while fetching diagrams.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Failed to fetch diagrams"
+
+  /diagrams/{id}:
+    get:
+      summary: Get a specific diagram
+      description: Retrieves the file path of a specific diagram by its MongoDB ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: MongoDB ID of the diagram
+      responses:
+        "200":
+          description: Successfully retrieved the diagram file path.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  filePath:
+                    type: string
+                    example: "/uploads/diagram-1711598765.png"
+                    description: Public URL path to the generated file
+        "404":
+          description: Diagram not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Diagram not found"
+        "500":
+          description: Internal server error while fetching the diagram.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Failed to fetch diagram"
+
+    delete:
+      summary: Delete a diagram by file path
+      description: Deletes a diagram file from the uploads directory using the provided file path.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - filePath
+              properties:
+                filePath:
+                  type: string
+                  example: "/uploads/diagram-1711598765.png"
+                  description: Public URL path of the diagram to delete
+      responses:
+        "200":
+          description: Successfully deleted the diagram.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Diagram deleted successfully"
+                  deletedFilePath:
+                    type: string
+                    example: "/uploads/diagram-1711598765.png"
+        "400":
+          description: Bad request due to missing file path.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "File path is required"
+        "404":
+          description: Diagram not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Diagram not found"
+        "500":
+          description: Internal server error while deleting the diagram.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Failed to delete diagram"
